@@ -13,16 +13,16 @@ if __name__ == '__main__':
         i = 0
         while True:
             url = in_file.readline()
+            url = url[:-1]  # remove '\n' ending
             if url == '':
                 break
 
             response = requests.get(url)
-            decoded_content = response.content.decode("utf-8")
+            decoded_content = response.content
 
             filename = '../archive/' + str(i) + '.txt'
-
             os.makedirs(os.path.dirname(filename), exist_ok=True)
-            with open(filename, 'w', errors="ignore") as out_file:
+            with open(filename, 'wb') as out_file:
                 out_file.write(decoded_content)
 
             meta[filename] = url
