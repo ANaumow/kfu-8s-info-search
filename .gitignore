@@ -8,8 +8,8 @@ __pycache__/
 
 *.idea*
 
-./lemmas/
-./tokens/
+lemmas/
+tokens/
 
 # Distribution / packaging
 .Python
