@@ -19,6 +19,9 @@ if __name__ == '__main__':
 
                 lines = file_content.split("\n")
                 for line in lines:
+                    if line == '':
+                        continue
+
                     words = line.split(" ")
 
                     lemma_on_line = words[0]
