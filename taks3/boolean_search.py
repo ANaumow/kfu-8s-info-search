@@ -30,7 +30,7 @@ if __name__ == '__main__':
     print(search_result)
 
 
-    search_result = boolean_search("best & way & find & element", html_to_lemmas)
+    search_result = boolean_search("best & way | find & element", html_to_lemmas)
 
     print(len(search_result))
     print(search_result)
