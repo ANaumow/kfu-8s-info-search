@@ -10,6 +10,7 @@ __pycache__/
 
 lemmas/
 tokens/
+top100/
 lemmas_tf-idf/
 tokens_tf-idf/
 archive/
