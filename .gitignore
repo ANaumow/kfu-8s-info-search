@@ -14,7 +14,10 @@ top100/
 lemmas_tf-idf/
 tokens_tf-idf/
 archive/
-test/
+old/test/
+raw/
+example/
+demo/
 
 # Distribution / packaging
 .Python
