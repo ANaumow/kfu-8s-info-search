@@ -1,23 +1,11 @@
-# поисковый запрос - тоже вектор
-# размерность вектора - все уникальные леммы
-# элементы вектора - tf-idf слова
-# формула для ранжирования: http://akorsa.ru/2017/01/vektornaya-model-i-kosinusnoe-shodstvo-cosine-similarity/
 import json
-import math
-from functools import reduce
-from os import walk
-
-import nltk
-from nltk.stem import WordNetLemmatizer
-from nltk.corpus import wordnet, stopwords
 from math import sqrt
 
-from scipy.spatial import distance
+import nltk
+from nltk.corpus import wordnet, stopwords
+from nltk.stem import WordNetLemmatizer
 
 from taks3.boolean_search import boolean_search
-
-
-big = 999999999
 
 def get_wordnet_pos(treebank_tag):
     if treebank_tag.startswith('J'):
@@ -54,7 +42,6 @@ def read_html_lemma_tf_idf(html_name) -> dict[str, (float, float)]:
 
     return lemma_info_for_html
 
-iii = 0
 
 def calc_similarity(a, b):
     # cosine = distance.cosine(a[1], b)
@@ -113,14 +100,12 @@ def vector_search(query):
         html_lemma_info = read_html_lemma_tf_idf(found_html)
         vector = []
 
-        # здесь кароче надо не юник а иммено все
         for lemma in unique_lemmas:
             if lemma in html_lemma_info:
                 lemma_idf, lemma_tf_idf = html_lemma_info.get(lemma)
                 lemmas_idf.setdefault(lemma, lemma_idf)
                 vector.append(lemma_tf_idf)
             else:
-                # слово в запросе есть но в текущем документе нет
                 vector.append(0.0)
 
         selection.append((found_html, vector))
@@ -128,7 +113,6 @@ def vector_search(query):
     # вектор из запроса
     query_vector = []
 
-    print('')
     print('')
 
     for lemma in unique_lemmas:
@@ -140,40 +124,20 @@ def vector_search(query):
             lemma_tf = lemma_count / len(lemmas_in_query)
             lemma_tf_idf = lemma_tf * lemmas_idf[lemma]
 
-
-
             print(lemma_count, lemma_tf, lemma_tf_idf, lemma)
-
-            # for lemma in lemmas_in_query:
-            #     index = unique_lemmas.index(lemma)
-            #     print(sum([tokens_info[token] for token in tokens]), query_vector[index], lemma)
-
-
 
             query_vector.append(lemma_tf_idf)
         else:
             query_vector.append(0.0)
-            # print("в запросе есть слово которое не встретилось ни в одном html")
-            # return []
+
     print('')
-    print('')
-    # наконец сортируем
-    # sel2 = []
-    # for s in selection:
-    #     sel2.append(s, calc_similarity(s, query_vector))
 
     selection = sorted(selection, key=lambda d: calc_similarity(d, query_vector), reverse=True)
-
-    # for html, v in selection:
-    #     print(v)
 
     selection_ = [(s[0], calc_similarity(s, query_vector), s[1]) for s in selection]
 
 
     # достаю инфо
-    html_files_folder = '../archive/'
-    lemmas_file_prefix = '../lemmas/'
-    htmls: list[(str, int, dict[str, int]), dict[str, list[str]]] = []
 
     with open("../htmls_data.json", 'r', encoding="utf-8") as file:
         htmls = json.loads(file.read())
