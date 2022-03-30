@@ -10,7 +10,7 @@ from nltk.stem import WordNetLemmatizer
 import nltk
 
 
-def tokenize(content):
+def tokenize(content, html_name):
     russian_stopwords = stopwords.words('russian')
     english_stopwords = stopwords.words('english')
     letters_pattern = re.compile("^[a-zA-Zа-яА-я]+$")
@@ -40,6 +40,10 @@ def tokenize(content):
         return list(filter(letters_pattern.match, tokens))
 
     input_text = remove_tags(content)
+    os.makedirs(os.path.dirname('../raw/'), exist_ok=True)
+    with open('../raw/raw_' + html_name, 'w', encoding="utf-8") as file:
+        file.write(input_text)
+
 
     tokens = nltk.word_tokenize(input_text)
 
@@ -91,9 +95,9 @@ def prepare_content(raw_content):
     if '<div xmlns="http://www.w3.org/1999/xhtml">' in raw_content:
         result = re.findall(r'<div xmlns="http://www.w3.org/1999/xhtml">((.|\n)*?)<DIV class="v-portal"', raw_content)
         return result[0][0]
-    if '<div id="mainbar" role="main" aria-label="question and answers">' in raw_content:
+    if '<div id="mainbar" role="main.py" aria-label="question and answers">' in raw_content:
         result = re.findall(
-            r'<div id="mainbar" role="main" aria-label="question and answers">((.|\n)*)?</div>((.|\n)*)?<div id="sidebar" class="show-votes" role="complementary" aria-label="sidebar">',
+            r'<div id="mainbar" role="main.py" aria-label="question and answers">((.|\n)*)?</div>((.|\n)*)?<div id="sidebar" class="show-votes" role="complementary" aria-label="sidebar">',
             raw_content)
         result2 = result[0][0]
         return result2
@@ -118,7 +122,7 @@ if __name__ == '__main__':
 
         # токенизация
 
-        tokens = tokenize(content)
+        tokens = tokenize(content, filepath)
 
         dir_name = '../tokens/'
         tokens_file_prefix = dir_name + 'tokens_'

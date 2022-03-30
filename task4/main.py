@@ -1,3 +1,4 @@
+import json
 import math
 import os
 import re
@@ -55,9 +56,9 @@ def prepare_content(raw_content):
     if '<div xmlns="http://www.w3.org/1999/xhtml">' in raw_content:
         result = re.findall(r'<div xmlns="http://www.w3.org/1999/xhtml">((.|\n)*?)<DIV class="v-portal"', raw_content)
         return result[0][0]
-    if '<div id="mainbar" role="main" aria-label="question and answers">' in raw_content:
+    if '<div id="mainbar" role="main.py" aria-label="question and answers">' in raw_content:
         result = re.findall(
-            r'<div id="mainbar" role="main" aria-label="question and answers">((.|\n)*)?</div>((.|\n)*)?<div id="sidebar" class="show-votes" role="complementary" aria-label="sidebar">',
+            r'<div id="mainbar" role="main.py" aria-label="question and answers">((.|\n)*)?</div>((.|\n)*)?<div id="sidebar" class="show-votes" role="complementary" aria-label="sidebar">',
             raw_content)
         result2 = result[0][0]
         return result2
@@ -67,7 +68,7 @@ def prepare_content(raw_content):
 
 if __name__ == '__main__':
 
-    html_files_folder = '../top100/'
+    html_files_folder = '../archive/'
     lemma_files_folder = '../lemmas/'
     lemmas_file_prefix = lemma_files_folder + 'lemma_'
 
@@ -105,14 +106,20 @@ if __name__ == '__main__':
 
         htmls.append((filepath, word_count, tokens_info, lemmas))
 
+
+    with open("../htmls_data.json", 'w', encoding="utf-8") as index:
+        index.truncate()
+        json.dump(htmls, index, indent=4, sort_keys=True, ensure_ascii=False)
+
+
     for html_name, word_count, tokens_info, lemmas in htmls:
         tf_tokens = dict()
         idf_tokens = dict()
         tf_idf_tokens = dict()
 
         for token, token_count in tokens_info.items():
-            token_tf = token_count / word_count
-            token_idf = math.log10(len(htmls) / len(list(filter(lambda h: token in h[2], htmls))))
+            token_tf = token_count / sorted(tokens_info.items(), key=lambda e: e[1], reverse=True)[0][1] # word_count
+            token_idf = math.log2(len(htmls) / len(list(filter(lambda h: token in h[2], htmls))))
 
             tf_tokens[token] = token_tf
             idf_tokens[token] = token_idf
@@ -122,9 +129,20 @@ if __name__ == '__main__':
         idf_lemma = dict()
         tf_idf_lemma = dict()
 
+        max_lemma_count = 0
         for lemma, tokens in lemmas.items():
-            lemma_tf = sum([tf_tokens[token] for token in tokens])
-            lemma_idf = math.log10(len(htmls) / len(list(filter(lambda h: lemma in h[3], htmls))))
+            current_lemma_count = 0
+            for token in tokens:
+                token_count = tokens_info[token]
+                current_lemma_count += token_count
+
+            max_lemma_count = max([max_lemma_count, current_lemma_count])
+            # for token in toke
+
+        for lemma, tokens in lemmas.items():
+            # lemma_tf = sum([tf_tokens[token] for token in tokens])
+            lemma_tf = sum([tokens_info[token] for token in tokens]) / max_lemma_count
+            lemma_idf = math.log2(len(htmls) / len(list(filter(lambda h: lemma in h[3], htmls))))
 
             tf_lemma[lemma] = lemma_tf
             idf_lemma[lemma] = lemma_idf

@@ -35,7 +35,10 @@ class WordNode(Node):
         self.word = word
 
     def eval(self, index, html_file):
-        return html_file in index[self.word]
+        if self.word in index:
+            return html_file in index[self.word]
+        else:
+            return False
 
 
 def __parse_lvl_1(tokens):

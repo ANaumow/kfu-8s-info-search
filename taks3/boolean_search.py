@@ -1,12 +1,15 @@
 import json
 from os import walk
-import parcer
+import taks3.parcer
 
 html_files_folder = '../archive/'
 
-def boolean_search(input, index: dict[str, list[str]]):
+def boolean_search(query):
 
-    root_node = parcer.parse(input)
+    with open("../taks3/term_index.json", 'r', encoding="utf-8") as index_file:
+        index = json.loads(index_file.read())
+
+    root_node = taks3.parcer.parse(query)
 
     html_files = []
     for (_, _, filenames) in walk(html_files_folder):
@@ -21,16 +24,15 @@ def boolean_search(input, index: dict[str, list[str]]):
 
 if __name__ == '__main__':
 
-    with open("./term_index.json", 'r', encoding="utf-8") as index:
-        html_to_lemmas = json.loads(index.read())
 
-    search_result = boolean_search("best & (way | find) & element", html_to_lemmas)
+
+    search_result = boolean_search("best & (way | find) & element")
 
     print(len(search_result))
     print(search_result)
 
 
-    search_result = boolean_search("best & way | find & element", html_to_lemmas)
+    search_result = boolean_search("best & way | find & element")
 
     print(len(search_result))
     print(search_result)

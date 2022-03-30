@@ -17,7 +17,6 @@ archive/
 old/test/
 raw/
 example/
-demo/
 
 # Distribution / packaging
 .Python
