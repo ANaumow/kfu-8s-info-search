@@ -8,15 +8,6 @@ __pycache__/
 
 *.idea*
 
-lemmas/
-tokens/
-top100/
-lemmas_tf-idf/
-tokens_tf-idf/
-archive/
-old/test/
-raw/
-example/
 
 # Distribution / packaging
 .Python

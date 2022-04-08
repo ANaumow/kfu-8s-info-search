@@ -1,54 +1,44 @@
 import json
 from math import sqrt
 
-import nltk
-from nltk.corpus import wordnet, stopwords
-from nltk.stem import WordNetLemmatizer
+from task2.main import tokenize, lemmatize, load_meta
+from task3.inverting_index import load_lemmas
+from task4.main import load_tokens
+from task3.boolean_search import boolean_search, load_term_index
 
-from taks3.boolean_search import boolean_search
-
-def get_wordnet_pos(treebank_tag):
-    if treebank_tag.startswith('J'):
-        return wordnet.ADJ
-    elif treebank_tag.startswith('V'):
-        return wordnet.VERB
-    elif treebank_tag.startswith('N'):
-        return wordnet.NOUN
-    elif treebank_tag.startswith('R'):
-        return wordnet.ADV
-    else:
-        return wordnet.NOUN
-
-
-def read_html_lemma_tf_idf(html_name) -> dict[str, (float, float)]:
-    lemmas_tf_idf_folder = "../lemmas_tf-idf/"
-    lemma_tf_idf_prefix = "lemma_tf-idf_"
-    lemma_info_for_html = dict()
-
-    with open(lemmas_tf_idf_folder + lemma_tf_idf_prefix + html_name, 'r', encoding="utf-8") as file:
-        lines = file.readlines()
-
-    for line in lines:
-        if line == "":
-            continue
-
-        line_items = line.split(" ")
-
-        lemma = line_items[0]
-        lemma_idf = float(line_items[1])
-        lemma_tf_idf = float(line_items[2])
-
-        lemma_info_for_html.setdefault(lemma, (lemma_idf, lemma_tf_idf))
-
-    return lemma_info_for_html
+#            | lemma1 | lemma2 | lemma3 |   ...  |
+# ----------------------------------------------------
+# document 1 | tf-idf |  ...   |        |        |
+# ----------------------------------------------------
+# document 2 | ...    |  ...   |   0    |        |
+# ----------------------------------------------------
+# document 3 |        |        |        |        |
+# ----------------------------------------------------
+# document 4 |        |        |        |        |
+# ----------------------------------------------------
+#     ...    |        |        |        |        |
+# ----------------------------------------------------
+#   запрос   |        |        |        |        |
+# ----------------------------------------------------
 
 
-def calc_similarity(a, b):
-    # cosine = distance.cosine(a[1], b)
-    # return cosine
-    a = a[1]
+def load_lemmas_info(content_file):
+    content_filename = content_file.replace("../archive/", "")
+
+    # вычисляю путь до файла с леммами для текущей страницы
+    lemma_filename = "../lemmas_info/lemma_info_" + content_filename
+
+    with open(lemma_filename, 'r', encoding="utf-8") as file:
+        return json.loads(file.read())
+
+
+def load_lemmas_idf():
+    with open("../task4/lemmas_idf.json", 'r', encoding="utf-8") as file:
+        return json.loads(file.read())
+
+def similarity(a, b):
     if len(a) != len(b):
-        raise Exception("разная длина векторов")
+        raise Exception("len is different")
 
     vector_size = len(a)
 
@@ -62,109 +52,87 @@ def calc_similarity(a, b):
     return numerator / denominator
 
 
-
 def vector_search(query):
-    lemmatizer = WordNetLemmatizer()
-    tokenizer = nltk.tokenize.TreebankWordTokenizer()
+    query_tokens = tokenize(query)
+    query_lemmas = lemmatize(query_tokens)
+    documents_lemmas = load_term_index()
 
-    tokens = tokenizer.tokenize(query)
-    english_stopwords = stopwords.words('english')
+    all_lemmas = set()
 
-    lemmas_in_query = [lemmatizer.lemmatize(token, get_wordnet_pos(pos)) for token, pos in nltk.pos_tag(tokens)]
-    lemmas_in_query = list(filter(lambda l: l not in english_stopwords, lemmas_in_query))
+    for lemma in query_lemmas:
+        all_lemmas.add(lemma)
 
-    unique_lemmas = set(lemmas_in_query)
+    for lemma in documents_lemmas:
+        all_lemmas.add(lemma)
 
-    # sort | array | java
-    query_for_boolean_search = " | ".join(lemmas_in_query)
+    # "взлом | страница"
+    query_for_boolean_search = " | ".join(query_lemmas)
 
-    found_html_list = boolean_search(query_for_boolean_search)
+    found_content_files = boolean_search(query_for_boolean_search)
 
-    print(found_html_list)
+    lemmas_idf = load_lemmas_idf()
 
-    # все встретившиеся леммы из html и их idf
-    lemmas_idf: dict[str, float] = dict()
-
-    # список пар: название документа, и он в виде вектора
-    selection: list[(str, list[float])] = []
-
-    for found_html in found_html_list:
-        html_lemma_info = read_html_lemma_tf_idf(found_html)
-
-        for lemma in html_lemma_info:
-            unique_lemmas.add(lemma)
-
-    unique_lemmas = list(unique_lemmas)
-
-    for found_html in found_html_list:
-        html_lemma_info = read_html_lemma_tf_idf(found_html)
-        vector = []
-
-        for lemma in unique_lemmas:
-            if lemma in html_lemma_info:
-                lemma_idf, lemma_tf_idf = html_lemma_info.get(lemma)
-                lemmas_idf.setdefault(lemma, lemma_idf)
-                vector.append(lemma_tf_idf)
-            else:
-                vector.append(0.0)
-
-        selection.append((found_html, vector))
-
-    # вектор из запроса
+    # вектор запроса
     query_vector = []
 
-    print('')
+    for lemma in all_lemmas:
+        if lemma in query_lemmas:
+            lemma_count = sum([1 if l == lemma else 0 for l in query_lemmas])
 
-    for lemma in unique_lemmas:
-
-        if lemma in lemmas_in_query:
-
-            lemma_count = sum([1 if current_lemma == lemma else 0 for current_lemma in lemmas_in_query])
-
-            lemma_tf = lemma_count / len(lemmas_in_query)
-            lemma_tf_idf = lemma_tf * lemmas_idf[lemma]
-
-            print(lemma_count, lemma_tf, lemma_tf_idf, lemma)
+            lemma_tf = lemma_count / len(query_lemmas)
+            lemma_tf_idf = lemma_tf * lemmas_idf.get(lemma, 0)
 
             query_vector.append(lemma_tf_idf)
         else:
-            query_vector.append(0.0)
+            query_vector.append(0)
 
-    print('')
+    # путь статьи, его вектор, значение схожести
+    documents: list[(str, list[float], float)] = []
 
-    selection = sorted(selection, key=lambda d: calc_similarity(d, query_vector), reverse=True)
+    # для каждой статьи создаем вектор
+    for content_file in found_content_files:
+        document_lemma = load_lemmas_info(content_file)
+        current_vector = []
 
-    selection_ = [(s[0], calc_similarity(s, query_vector), s[1]) for s in selection]
+        for lemma in all_lemmas:
+            if lemma in document_lemma:
+                tf, tf_idf = document_lemma[lemma]
+                current_vector.append(tf_idf)
+            else:
+                current_vector.append(0.0)
 
+        sim_result = similarity(current_vector, query_vector)
+        documents.append((content_file, current_vector, sim_result))
 
-    # достаю инфо
+    documents.sort(key=lambda d: d[2], reverse=True)
 
-    with open("../htmls_data.json", 'r', encoding="utf-8") as file:
-        htmls = json.loads(file.read())
-
-
-    with open("../task1/index.txt", 'r', encoding="utf-8") as file:
-        meta = json.loads(file.read())
-
-    for item, cd, v in selection_:
-        print(item, cd, meta["../archive/" + item])
-        for html_name, word_count, tokens_info, lemmas in htmls:
-            if item == html_name:
-                for lemma in lemmas_in_query:
-                    if lemma in lemmas:
-                        index = unique_lemmas.index(lemma)
-
-                        tokens = lemmas[lemma]
-                        print(sum([tokens_info[token] for token in tokens]), v[index] / lemmas_idf[lemma], v[index], lemma)
-
-        print('')
-
-
-    return selection_
-
-
-
+    return documents
 
 if __name__ == '__main__':
+    query = "взлом страниц"
+    result_documents = vector_search(query)
 
-    result = vector_search("variable")
+    # собираем инфу по результирующей выборке
+    query_lemmas = lemmatize(tokenize(query))
+    meta = load_meta()
+    for content_file, v, sim_result in result_documents:
+        print(meta[content_file])
+        print('сходство', sim_result)
+
+        lemmas_info = load_lemmas_info(content_file)
+        lemmas = load_lemmas(content_file)
+        tokens = load_tokens(content_file)
+
+        for query_lemma in query_lemmas:
+            if query_lemma in lemmas:
+                for token in lemmas[query_lemma]:
+                    print(token, ":", tokens[token])
+
+        print()
+
+
+
+
+
+
+
